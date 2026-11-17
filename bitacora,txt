@@ -1,0 +1,150 @@
+Bitácora · Café Origen analítica
+MiniReto 1 · El repositorio y los datos
+Diccionario de datos
+Propiedad	Tipo	Significado
+id	number	Identificador único de la venta (1 a 12).
+fecha	string	Fecha de la venta en formato AAAA-MM-DD. Es texto, no objeto Date.
+cliente	string	Código del cliente (C01…C08). Un mismo cliente puede comprar varias veces.
+producto	string	Nombre del producto vendido (café, prensa francesa, molino).
+ciudad	string	Ciudad donde se hizo la venta.
+cantidad	number	Unidades vendidas en ese registro.
+precio	number	Precio por unidad en pesos colombianos (COP).
+Casos borde detectados
+Ciudad mal escrita (id 5): viene como "medellín " (minúscula y con espacio final). Si comparo con === contra "Medellín", esa venta se pierde.
+Decisión: no modificar el dato original; normalizar al comparar y agrupar con trim() + toLowerCase().
+Cantidad 0 (id 8): una venta sin unidades. No aporta dinero y distorsiona el ticket promedio.
+Decisión: se conserva en los datos, pero el ticket promedio solo cuenta ventas válidas (cantidad > 0).
+Clientes repetidos: C01 aparece 3 veces, C02 y C03 2 veces. No es un error, pero obliga a definir qué es "una compra".
+Decisión: cada registro es una compra; no agrupo por cliente en esta versión.
+Fechas como texto: se comparan como strings, lo que funciona porque el formato AAAA-MM-DD es uniforme.
+Decisión: comparar con === y no convertir a Date por ahora.
+MiniReto 2 · Indicadores con ciclos
+Pseudocódigo
+
+valorVenta(venta): devolver cantidad × precio.
+
+totalVendido(ventas):
+
+total = 0                      (acumulador, inicia en 0)
+por cada venta en ventas:      (recorro todo)
+    total = total + valorVenta(venta)
+devolver total
+
+unidadesVendidas(ventas):
+
+unidades = 0
+por cada venta: unidades = unidades + venta.cantidad
+devolver unidades
+
+ventaMayor(ventas):
+
+mayor = nada (null)
+por cada venta:
+    si mayor es nada O valorVenta(venta) > valorVenta(mayor):
+        mayor = venta          (guardo el registro completo)
+devolver mayor
+
+ticketPromedio(ventas):
+
+total = 0, validas = 0
+por cada venta:
+    si cantidad > 0:           (condición: solo ventas válidas)
+        total += valorVenta(venta); validas += 1
+si validas == 0: devolver 0    (evita dividir 0/0)
+devolver total / validas
+
+ventasPorCiudad(ventas, ciudad):
+
+buscada = normalizar(ciudad)
+total = 0
+por cada venta:
+    si normalizar(venta.ciudad) == buscada: total += valorVenta(venta)
+devolver total
+Decisiones con arreglo vacío
+Función	[] devuelve	Por qué
+totalVendido	0	No se vendió nada.
+unidadesVendidas	0	Ídem.
+ventaMayor	null	No existe un registro que devolver.
+ticketPromedio	0	Evita 0/0 = NaN.
+ventasPorCiudad	0	No hay ventas en esa ciudad.
+Pruebas (tres entradas)
+Función	Completo (12)	Un elemento (id 1)	Vacío
+totalVendido	985000	84000	0
+unidadesVendidas	21	2	0
+ventaMayor	id 10	id 1	null
+ticketPromedio	89545,45	84000	0
+ventasPorCiudad("Medellín")	356000	84000	0
+Traza manual 1 · totalVendido (primeras 5 ventas y las demás)
+Venta	valorVenta	total después
+inicio		0
+id 1 (2×42000)	84000	84000
+id 2 (1×26000)	26000	110000
+id 3 (1×95000)	95000	205000
+id 4 (1×42000)	42000	247000
+id 5 (3×45000)	135000	382000
+id 6 (2×26000)	52000	434000
+id 7 (1×120000)	120000	554000
+id 8 (0×42000)	0	554000
+id 9 (2×45000)	90000	644000
+id 10 (4×42000)	168000	812000
+id 11 (1×95000)	95000	907000
+id 12 (3×26000)	78000	985000
+
+Coincide con el programa (985000). ✔
+
+Traza manual 2 · ventasPorCiudad(ventas, "Medellín")
+
+buscada = "medellín"
+
+Venta	ciudad normalizada	¿coincide?	total
+id 1	medellín	sí	84000
+id 4	medellín	sí	126000
+id 5	"medellín " → medellín	sí	261000
+id 11	medellín	sí	356000
+
+Las demás ventas (Bogotá, Cali, Pereira) no coinciden. Coincide con el programa (356000), y se confirma que la venta 5 sí se cuenta. ✔
+
+Traza manual 3 · ventaMayor
+Venta	valor	mayor después
+id 1	84000	id 1
+id 3	95000	id 3
+id 7	120000	id 7
+id 10	168000	id 10
+
+Ningún valor posterior supera 168000. ✔
+
+MiniReto 3 · Del ciclo al método
+Qué pregunta responde cada función
+Función	¿Qué recorro?	¿Qué filtro?	¿Qué transformo?	¿Qué acumulo?	¿Cómo agrupo?
+totalVendidoM	todas las ventas	–	–	suma de valorVenta (reduce, inicio 0)	–
+unidadesVendidasM	todas las ventas	–	–	suma de cantidad (reduce)	–
+ventasPorCiudadM	todas	las de la ciudad buscada (filter)	venta → valor (map)	suma de valores (reduce)	–
+totalPorCiudad	todas	–	clave = ciudad normalizada	total por ciudad	objeto diccionario {ciudad: total}
+unidadesPorProducto	todas	–	clave = producto	unidades por producto	objeto diccionario {producto: unidades}
+topProductosPorValor	todas	–	objeto → arreglo de {producto,total} (Object.entries + map)	total por producto	diccionario, luego sort desc + slice(0,k)
+Verificación
+
+node src/verificar.js imprime OK para los 7 pares ciclo/método. totalPorCiudad devuelve exactamente 4 grupos (Medellín, Bogotá, Cali, Pereira) y ventas conserva su orden original tras topProductosPorValor.
+
+Notas
+sort modifica el arreglo sobre el que se llama, por eso ordeno un arreglo nuevo ([...ranking]), nunca ventas.
+Normalizo la clave antes de agrupar; así "medellín " y "Medellín" caen en el mismo grupo.
+MiniReto 4 · Depuración
+Error 1 · "Bogotá aparecía dos veces"
+Síntoma: en ventas por ciudad aparece Bogotá duplicada.
+Entrada que lo produce: una venta con ciudad "Bogotá " (espacio final) junto a otras con "Bogotá".
+Hipótesis: el objeto usa venta.ciudad tal cual como clave, y "Bogotá" ≠ "Bogotá ".
+Prueba realizada: node src/depurar.js. Con la versión sin normalizar las claves son [... 'Bogotá', ..., 'Bogotá '].
+Causa: no se normalizaba el texto antes de usarlo como clave del grupo.
+Corrección: clave = capitalizar(normalizar(ciudad)). Resultado: 4 ciudades sin duplicados.
+Nota: con la muestra original el mismo fallo se vería con "medellín " (id 5). Mi versión ya no lo presenta porque normaliza.
+Error 2 · "Ticket promedio NaN con un día sin ventas"
+Síntoma: al filtrar un día sin ventas, el ticket promedio muestra NaN.
+Entrada que lo produce: ventas.filter(v => v.fecha === "2026-09-07") → arreglo vacío.
+Hipótesis: se divide 0 entre 0.
+Prueba realizada: versión con bug total / lista.length sobre [] → NaN (ver depurar.js).
+Causa: 0 / 0 es NaN en JavaScript.
+Corrección: if (validas === 0) return 0; antes de dividir. Resultado: 0, y el reporte muestra "Sin ventas registradas este día".
+Verificación final
+
+node src/reporte.js no muestra NaN, undefined ni grupos duplicados.

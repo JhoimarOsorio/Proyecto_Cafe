@@ -124,6 +124,22 @@ function topProductosPorValor(ventas, k) {
   const ranking = Object.entries(totales).map(([producto, total]) => ({ producto, total }));
   return [...ranking].sort((a, b) => b.total - a.total).slice(0, k);
 }
+
+// ============================================================
+// MiniReto 4: resumen de un día
+// ============================================================
+
+// Resumen de un día. Si no hubo ventas devuelve ceros (no un error ni NaN).
+function ventasDelDia(ventas, fecha) {
+  const delDia = ventas.filter((venta) => venta.fecha === fecha);
+  return {
+    fecha,
+    numeroVentas: delDia.length,
+    total: totalVendido(delDia),
+    unidades: unidadesVendidas(delDia),
+    ticketPromedio: ticketPromedio(delDia),
+  };
+}
  
 module.exports = {
   valorVenta,
@@ -139,5 +155,6 @@ module.exports = {
   totalPorCiudad,
   unidadesPorProducto,
   topProductosPorValor,
+  ventasDelDia,
 };
  
