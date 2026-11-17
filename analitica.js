@@ -69,6 +69,61 @@ function ventasPorCiudad(ventas, ciudad) {
   }
   return total; // ciudad inexistente o arreglo vacío -> 0
 }
+
+// ============================================================
+// MiniReto 3: versiones con métodos de arreglo y agrupaciones
+// ============================================================
+
+// reduce con valor inicial 0 (¿qué acumulo?)
+const totalVendidoM = (ventas) =>
+  ventas.reduce((acc, venta) => acc + valorVenta(venta), 0);
+
+const unidadesVendidasM = (ventas) =>
+  ventas.reduce((acc, venta) => acc + venta.cantidad, 0);
+
+// filter + map + reduce (¿qué filtro? ¿qué transformo? ¿qué acumulo?)
+const ventasPorCiudadM = (ventas, ciudad) =>
+  ventas
+    .filter((venta) => normalizar(venta.ciudad) === normalizar(ciudad))
+    .map(valorVenta)
+    .reduce((acc, valor) => acc + valor, 0);
+
+// Primera letra en mayúscula, para mostrar "medellín " como "Medellín".
+function capitalizar(texto) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// Objeto-diccionario { ciudad: total }. La clave se normaliza para no duplicar grupos.
+function totalPorCiudad(ventas) {
+  return ventas.reduce((grupos, venta) => {
+    const clave = capitalizar(normalizar(venta.ciudad));
+    grupos[clave] = (grupos[clave] || 0) + valorVenta(venta);
+    return grupos;
+  }, {});
+}
+
+// Objeto-diccionario { producto: unidades }.
+function unidadesPorProducto(ventas) {
+  return ventas.reduce((grupos, venta) => {
+    const clave = venta.producto.trim();
+    grupos[clave] = (grupos[clave] || 0) + venta.cantidad;
+    return grupos;
+  }, {});
+}
+
+// Los k productos que más dinero generaron, de mayor a menor.
+// Object.entries crea un arreglo NUEVO, así que sort() no toca `ventas`.
+// Se copia con [...] para dejar explícito que no se muta nada.
+function topProductosPorValor(ventas, k) {
+  const totales = ventas.reduce((grupos, venta) => {
+    const clave = venta.producto.trim();
+    grupos[clave] = (grupos[clave] || 0) + valorVenta(venta);
+    return grupos;
+  }, {});
+
+  const ranking = Object.entries(totales).map(([producto, total]) => ({ producto, total }));
+  return [...ranking].sort((a, b) => b.total - a.total).slice(0, k);
+}
  
 module.exports = {
   valorVenta,
@@ -78,5 +133,11 @@ module.exports = {
   ventaMayor,
   ticketPromedio,
   ventasPorCiudad,
+  totalVendidoM,
+  unidadesVendidasM,
+  ventasPorCiudadM,
+  totalPorCiudad,
+  unidadesPorProducto,
+  topProductosPorValor,
 };
  
